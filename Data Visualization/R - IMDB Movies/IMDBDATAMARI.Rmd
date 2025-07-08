@@ -1,0 +1,430 @@
+---
+title: "<span style='color:navy; font-weight: bold; font-family: \"Helvetica Now Text Medium\"'>IMDB Movies Dataset from Various Countries and Year (1950 - 2024)</span>"
+author: "<span style='color:navy;font-family: \"Helvetica Now Text Medium\";'>By: Mari Sisco | 2025-02-27 </span>"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2 
+    theme: united
+    code_folding: hide
+---
+
+```{r setup, include=FALSE, warning= FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Introduction </span> {.tabset .tabset-fade .tabset-pills}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The film industry is one of the most dynamic and influential sectors in the global entertainment landscape, producing thousands of movies each year that shape cultural narratives and drive economic activity. With the rise of digital platforms and increasing data availability, analyzing trends in movie production, audience reception, and financial performance has become more accessible. This dataset provides valuable insights into various aspects of the film industry, including movie budgets, revenues, genres, and audience ratings, allowing for a deeper understanding of the patterns and factors that contribute to a film's success or failure. I define success to be compared through the use of the top-10 movie producing countries. </span>
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Dataset </span> 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> 
+The dataset, obtained through Kaggle, is composed by 1048575 rows, and 21 features, with the relevant feautures in the analysis being:
+<ul style="list-style-type:circle">
+  <li>Movie Title: The official name of the film.</li>
+  <li>Release Date: The date the movie was released.</li>
+  <li>Production Countries: The country or countries responsible for producing the movie.</li>
+  <li>Budget: The estimated production budget of the movie.</li>
+  <li>Revenue: The total box office revenue earned.</li>
+  <li>Average Rating: The IMDB rating based on user reviews.</li>
+</ul>
+An initial data assessment reveals that some movies have negative runtimes, which is not possible and may indicate data errors. Budget, revenue, and vote count are highly skewed due to the presence of both blockbuster and lesser-known movies. Certain columns, such as spoken_languages, tagline, keywords, genres, production_companies, and production_countries, contain a high number of missing values. All of this required data tuning and preprocesing to ensure a good analysis. Additionally, a new variable, Year of Release, was added to the dataset to facilitate time-based trend analysis.  </span> 
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Findings </span> {.tabset .tabset-fade .tabset-pills}
+
+## Movie Count and Total Revenue (2010-2020) {.tabset .tabset-fade .tabset-pills}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> This visualization combines a bar chart and a line graph to analyze movie production volume and revenue for the top movie-producing countries between 2010 and 2020.
+The key insights from this analysis are:
+<ul style="list-style-type:circle">
+  <li>The USA Dominates Both Movie Production and Revenue.</li>
+</ul>
+The United States stands out as the highest-grossing country in the film industry, generating significantly more revenue than any other country. They also porduce a lot more movies compared to other countries. This suggests that Hollywood’s global market influence, blockbuster culture, and high-budget productions drive massive box office success worldwide.
+<ul style="list-style-type:circle">
+  <li>India’s Movie Industry: Lower Production, but second highest revenue</li>
+</ul>
+India emerges as another major movie-producing country, though its total revenue is considerably lower than the USA, it is the second country with the highest revenue. This highlights a contrast in business models: India’s film industry (notably Bollywood) is known for high production volume but lower per-movie revenue. The lower revenue per film may be attributed to regional markets, lower ticket prices, and different distribution models.
+<ul style="list-style-type:circle">
+  <li> Other Countries Have Lower Revenue and lower Movie Production</li>
+</ul>
+Countries like Japan, the UK, France, Germany, and Canada contribute to global cinema but generate significantly less revenue than the USA and India. The disparity suggests that while these countries have strong film industries, their global box office pull is more regionally concentrated. Factors such as language barriers, distribution limitations, and market reach may explain why their movies don’t generate as much revenue internationally.
+</span> 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# --------------- ASSIGNMENT 1 -----------------------------
+
+# Data set: IMDB MOVIES
+
+# What I am overall investigating in this dataset, out of the top 10 movie-producing countries,
+# which country is the most sucessful and which contry is the least succesful. 
+library(data.table)
+library(lubridate)
+library(dplyr)
+library(scales)
+library(ggplot2)
+library(ggthemes)
+library(ggrepel)
+library(plotly)
+library(RColorBrewer)
+
+
+setwd("~/Documents/R Files/R VISUALIZATION")
+filename <- "Imdb_Movie_Dataset.csv"
+# NA and string of length 0 are considered invalid
+
+df <- fread(filename, na.strings=c(NA, ""))
+
+# New column of year
+df$year <- year(mdy(df$release_date))
+
+# ------------------ Data set up for stacked bar charts ------------------------
+
+# Extracting count of how many movies per countries
+df_countries <- dplyr::count(df, production_countries)
+df_countries <- df_countries[order(df_countries$n, decreasing =TRUE),]
+
+# Top 10 movie-making countries
+# first country is NA, which we do not want
+top_countries <- df_countries$production_countries[2:11]
+
+years_selected <- c(2010,2011,2012,2013,2014,2015,2016,2017,2018,2019,2020)
+
+# a pipe %>%, one big long or statement
+new_df <- df %>% 
+  dplyr::filter(production_countries %in% top_countries,
+         year %in% years_selected)  %>%
+  dplyr::select(release_date, production_countries)  %>% 
+  dplyr::mutate(year = year(mdy(release_date)))  %>%  # new column called year
+  dplyr::group_by(production_countries, year)  %>% 
+  dplyr::summarise(n = length(production_countries), .groups = 'keep')  %>% # keep the description
+  data.frame()
+
+# how much revenue each country has made in movies
+revenues_df <- df  %>%
+  dplyr::filter(production_countries %in% top_countries,
+         year %in% years_selected)  %>%
+  dplyr::select(production_countries, revenue)  %>%
+  dplyr::group_by(production_countries)  %>%
+  dplyr::summarise(totrevenue = sum(revenue))  %>%
+  data.frame()
+
+# ---------- DUAL AXIS ON A STACKED BAR CHART, First Visualization ----------------
+# First visualization: Top 10 countries with the count of the number of movies
+# they have made (per year 2010-2020 legend) (horizontal stacked bar chart), and another line with 
+# the total revenue earned by each country. 
+
+# totrevenue are not numbers, so...
+revenues_df$totrevenue <- as.numeric(revenues_df$totrevenue)
+ylab <- seq(0, max(revenues_df$totrevenue)/1e6, 40000)
+my_labels <- paste0("$", ylab, "M")
+
+# the year is a number, however it is a factor
+new_df$year <- as.factor(new_df$year) # it is discreet
+
+ggplot(new_df, aes(x = reorder(production_countries, n, sum), y = n, fill = year)) +
+  geom_bar(stat = "identity", position = position_stack(reverse = TRUE)) +
+  coord_flip()  + # flipping coordinates
+  theme_light() + 
+  labs(title = "Movie Count and Total Revenues between 2010 and 2020", x="", y="Movies Count", fill="Year") +
+  theme(plot.title = element_text(hjust = 0.5)) + # left = 0, right = 1
+  scale_fill_brewer(palette = "Spectral", guide = guide_legend(reverse = TRUE)) + 
+  # here we are adding our other graph, everything above is like the previous stacked bar plot
+  # I don't want to use the same axis information as before, in this instance it is not a count but a total amount of revenue
+  geom_line(inherit.aes = FALSE, data=revenues_df, 
+            aes(x=production_countries, y = totrevenue/1e6, colour = "Total Revenue", group = 1), size = 1)  + 
+  # group = 1, we will end up with one line
+  # change colour of the line
+  scale_color_manual(NULL, values="black") +
+  # fix the axis! problem in geom_line, y = totfines/1e6, rescale
+  # putting a second y-axis, with good labeling
+  # Adding the y labels done above
+  scale_y_continuous(labels=comma, 
+                     sec.axis = sec_axis(~. *1e6, name="Total Revenue", labels = my_labels,
+                                         breaks = ylab*10^6)) +
+  # Adding dots and circles at each breakpoint of the line
+  # shape = 21 is circles
+  geom_point(inherit.aes = FALSE, data = revenues_df, # here we are reverting the scaling done before
+             aes(x = production_countries, y = totrevenue/1e6, group = 1),
+             size = 3, shape = 21, fill = "white", color = "black") +
+  # Legend
+  theme(legend.background = element_rect(fill = "transparent"),
+        legend.box.background = element_rect(fill = "transparent", colour = NA),
+        legend.spacing = unit(-1, "lines"))
+
+
+```
+
+## Total Movie Counts of Highest 10 Movie-Producing Countries {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> 
+The chart is a donut-style pie chart, which effectively represents proportions of different movie-producing countries while leaving space in the center for the total movie count. Each section represents the percentage of the total movies produced by the top-10 movie producing countries. The percentages sum to 100%, showing the contribution of each country to the database. The United States of America accounts for 44.9% of the total movie count. This means that almost half of all movies in the database originate from the U.S. Hollywood's global influence and its high production volume contribute to this dominance. Japan is the second-largest producer, responsible for 10.1% of the movies. This could be attributed to Japan’s strong anime industry, as well as live-action productions that have gained international recognition. The United Kingdom (8.5%), Germany (8.34%), and France (8.22%) contribute relatively equal shares to the total movie count. These three European countries have historically strong film industries, with the UK producing both Hollywood collaborations and independent films, Germany known for its rich film culture, and France being a leader in art films. Potential bias and limitations are present, as the chart only represents data from a specific database, which may not include all global productions.
+</span> 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# ------- Second Visualization ----------
+top_countries_pie <- df_countries[2:11]
+
+countries_df <- top_countries_pie %>%
+  dplyr::mutate(percent_of_total = round(100*n/sum(n),1)) %>% # getting the percentage of each
+  data.frame()
+
+# Donnut chart, creates a whole in the middle, we can fit it with more data
+
+plot_ly(countries_df, labels = ~production_countries, values = ~n) %>%
+  add_pie(hole=0.6) %>%
+  layout(title ="Total Movie Counts in Database of Highest 10 Movie-Producing Countries") %>%
+  # what we are adding in the middle of the hole
+  layout(annotations=list(text=paste0("Total Movie Count: \n", 
+                                      scales::comma(sum(countries_df$n))),
+                          "showarrow"=F))
+```
+
+## Movie Count by Month (2010-2020) {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> This graph highlights the number of movies produced between the years of 2010 and 2020 per month. The number of movies released fluctuates throughout the year, with peaks in January and October. The highest count (44,295) is in January, suggesting a preference for movie releases at the start of the year. COVID-19 Impact in 2020 could be observed in the graph. A sharp decline in February (17,868 movies) is observed. This could be due to lockdowns, halted productions, and cinema closures, leading to fewer releases. Recovery seems slow, with no major spikes later in the year, showing long-term effects of the pandemic on the film industry.  </span> 
+
+```{r, echo = TRUE, message=FALSE, warning=FALSE}
+
+# --------MOVIE COUNT BY MONTH (LINE PLOTS WITH HIGHLIGHTS AND LABELS) ---------
+
+# Third visualization: Number of movies released each month of the year (from 2010 to 2020) as a line graph.
+
+months_df <- df %>%
+  dplyr::filter(!is.na(release_date),
+         year %in% years_selected) %>%
+  dplyr::select(release_date)  %>% # selecting columns needed
+  dplyr::mutate(month = month(mdy(release_date)))  %>% # mutate to create variable
+  dplyr::group_by(month)  %>%
+  dplyr::summarise(n = length(release_date), .groups = 'keep')  %>%
+  data.frame()
+
+months_df$month <- as.integer(months_df$month)
+
+#axis labels
+x_axis_labels = min(months_df$month):max(months_df$month)
+
+#high and low points
+hi_lo <- months_df %>%
+  # looks at certain rows
+  # identity row that has smallest/highest n
+  filter(n == min(n) | n == max(n))  %>%
+  data.frame()
+
+
+ggplot(months_df, aes(x = month, y = n)) +
+  geom_line(color="black", size = 1) +
+  geom_point(shape=21, size=4, color='magenta', fill="white") +
+  # caption: add a little bit of info lower right
+  labs(x = "Month", y = "Movie Count", title="Movie Count by Month from 2010 to 2020") +
+  # get rid of scientific notation
+  scale_y_continuous(labels=comma) +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  # fixing x axis
+  scale_x_continuous(labels = x_axis_labels, breaks = x_axis_labels, minor = NULL) +
+  geom_point(data = hi_lo, aes(x=month, y = n), shape=21, size=4, fill = "magenta", color='magenta') +
+  # Adding text to those points
+  # we can play with box.padding/point.padding
+  geom_label_repel(aes(label =  ifelse(n == max(n) | n == min(n), scales::comma(n) , ""  )), 
+                   box.padding = 1, 
+                   point.padding = 1, 
+                   size=4, 
+                   color='Grey50', 
+                   segment.color = 'darkblue')
+
+
+  
+```
+
+## Movie Ratings in top 10 Movie-Producing Countries {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> This heatmap visualizes the distribution of ratings across the top 10 movie-producing countries. The x-axis represents different countries (Brazil, Canada, France, Germany, India, Italy, Japan, Spain, UK, USA), while the y-axis represents the rating scale from 0 to 10. The values in each cell show the percentage of movies that fall within each rating category for each country. The intensity of the purple color indicates the percentage of movies in a given rating range. Darker shades represent higher percentages, while lighter shades indicate lower percentages. The bottom row (rating = 0) shows the highest percentage throughout all countries, indicating that a large number of movies received extremely low ratings, particularly in Japan (65.4%) and Brazil (57.2%). The middle rating ranges (4.0-6.0) are more evenly distributed across countries. The higher ratings (8.0-10.0) have much lower percentages, suggesting that highly-rated movies are rarer. The graph highlights disparities in movie quality across different countries and suggests that a significant portion of films receive lower ratings. Countries like France and Germany have more highly rated films compared to others.   </span> 
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# ---------------- HeatMap --------------
+# Fourth Visualization - Heatmap of the top-10 countries and the rating they received for the movies
+
+# Number of movies in each rating 
+df_rating <- df  %>%
+  dplyr::filter(production_countries %in% top_countries,
+         year %in% years_selected)  %>%
+  dplyr::select(production_countries, vote_average)  %>%
+  dplyr::mutate(rating = round(vote_average))  %>%
+  dplyr::group_by(production_countries, rating)  %>%
+  dplyr::summarise(n = length(vote_average),.groups='keep')%>%
+  data.frame()
+
+# Total movies made by each country 
+count_df_rating <- df_rating %>%
+  dplyr::group_by(production_countries)  %>%
+  dplyr::summarise(totalmovies = sum(n))%>%
+  data.frame()
+
+df_rating <- df_rating %>%
+  dplyr::left_join(count_df_rating, by = "production_countries") %>%
+  dplyr::mutate(ratio_per_rating = n / totalmovies * 100)
+
+
+df_rating$ratio_per_rating <- round(df_rating$ratio_per_rating, 1)
+
+# Veryfying ratio sums to 100 per country
+count_df_ratio <- df_rating %>%
+  dplyr::group_by(production_countries)  %>%
+  dplyr::summarise(totalratio = sum(ratio_per_rating))%>%
+  data.frame()
+
+
+df_rating <- df_rating %>%
+  dplyr::mutate(production_countries = case_when(
+    production_countries == "United States of America" ~ "USA",
+    production_countries == "United Kingdom" ~ "UK",
+    TRUE ~ production_countries  # Keep other country names unchanged
+  ))
+
+
+# Correcting the breaks of the heatmap, the legend at the right
+breaks <- c(seq(0, max(df_rating$ratio_per_rating), by=10))
+
+ggplot(df_rating, aes(x = production_countries, y= rating, fill=ratio_per_rating)) +
+  geom_tile(color="black") +
+  geom_text(aes(label=comma(ratio_per_rating))) + 
+  coord_equal(ratio = 0.7) +
+  labs(title = "Heatmap: Rating by Top 10 Movie-Producing Countries",
+       x = "Country",
+       y = "Rating",
+       fill = "Percentage") + 
+  theme_minimal() +
+  theme(plot.title = element_text(hjust=0.5)) +
+  # Flipping the days, Mon to Sun instead of Sun to Mon
+  #scale_y_discrete(limits = rev(levels(days_df$dayoftheweek))) +
+  # Colors of the heat map, adding breaks 
+  scale_fill_continuous(low="white", high="darkorchid", breaks = breaks) +
+  # border of the breaks - legend at the right
+  guides(fill = guide_legend(reverse=TRUE, override.aes=list(colour="black")))
+
+
+```
+
+## Total Profit Made by USA by Month and by Year 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The idea of profit is investigated in these following graphs, obtaining it through the formula revenue - budget. I wanted to further explore the USA and India, as they are countries with the highest revenues. The USA shows a generally high profit trend across the years, with large fluctuations in certain months. Peak profits are observed in various years around mid-year months (April–July). The years 2015-2019 have relatively high and consistent profits, but 2020 is drastically different. The year 2020 (green bars) has a severe drop in profit levels compared to previous years, including some negative profits. The monthly profits in 2020 are barely visible on the scale, indicating a sharp decline. This aligns with the economic downturn caused by lockdowns, business shutdowns, and reduced consumer activity. Some minor recovery signs appear towards the end of 2020.
+ </span> 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# The united States and India where the highest countries with the highest produced revenue 
+
+# United States
+
+years_selected_profit <- c(2015,2016,2017,2018,2019,2020)
+
+df_usa <- df  %>%
+  dplyr::filter(production_countries %in% "United States of America",
+         year %in% years_selected_profit)  %>%
+  dplyr::select(release_date, revenue, budget)  %>%
+  dplyr::mutate(months = months(mdy(release_date), abbreviate = TRUE),
+         year = year(mdy(release_date)))  %>%  # new column called year
+  dplyr::group_by(year, months)  %>%
+  dplyr::summarise(profit = sum(revenue) - sum(budget),.groups='keep')%>%
+  data.frame()
+
+# change year as a factor, we do not want the year to be continuous 
+df_usa$year <- factor(df_usa$year)
+
+
+# Making labels in order 
+mymonths <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+              'Nov', 'Dec')
+# I can tell it the order i want it to be in
+months_order <- factor(df_usa$months, level=mymonths)
+
+
+# We are flipping the graph, so 2020 is in the upper right
+# Setting up ordering of the year
+x = min(as.numeric(levels(df_usa$year)))
+y = max(as.numeric(levels(df_usa$year)))
+
+df_usa$year <- factor(df_usa$year, levels = seq(y, x, by=-1))
+
+
+ggplot(df_usa, aes(x = months_order, y = profit, fill=year)) +
+  geom_bar(stat="identity", position="dodge") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Multiple Bar Charts - Total Profit made by the USA by Month by Year",
+       x = "Months of the year",
+       y = "Profit",
+       fill = "Year") +
+  scale_fill_brewer(palette = "Accent") +
+  # Currently there is a lot fo information in this graph
+  # no we get a graph for each year in its own
+  facet_wrap(~year, ncol=3, nrow=2)
+
+```
+
+## Total Profit Made by India by Month and by Year 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> This graph specifically investigates India. India’s profits are significantly lower than the USA's, as evident from the y-axis scale. Profits in India rarely exceed 200 million, whereas in the USA, they exceed 3 billion in certain years. Some years (e.g., 2017 and 2016) show large spikes in certain months (April, July, October), yet negative profits (losses) are observed in 2018 and 2016, which could be due to economic disruptions or sectoral downturns. Similar to the USA, 2020 shows drastically reduced profits. The effect in India seems even more severe as profits are almost negligible in most months. This is expected due to the strict lockdowns, economic slowdown, and massive disruption in business operations. While the USA also saw a decline, its impact is less extreme in relative terms. India’s smaller economy and reliance on small and medium enterprises (which struggled more than corporations) likely led to a harder economic hit. </span> 
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# India 
+
+years_selected_profit <- c(2015,2016,2017,2018,2019,2020)
+
+df_india <- df  %>%
+  dplyr::filter(production_countries %in% "India",
+         year %in% years_selected_profit)  %>%
+  dplyr::select(release_date, revenue, budget)  %>%
+  dplyr::mutate(months = months(mdy(release_date), abbreviate = TRUE),
+         year = year(mdy(release_date)))  %>%  # new column called year
+  dplyr::group_by(year, months)  %>%
+  dplyr::summarise(profit = sum(revenue) - sum(budget),.groups='keep')%>%
+  data.frame()
+
+# change year as a factor, we do not want the year to be continuous 
+df_india$year <- factor(df_india$year)
+
+
+# Making labels in order 
+mymonthsindia <- c('Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct',
+              'Nov', 'Dec')
+# I can tell it the order i want it to be in
+months_order_india <- factor(df_india$months, level=mymonthsindia)
+
+
+# We are flipping the graph, so 2020 is in the upper right
+# Setting up ordering of the year
+x = min(as.numeric(levels(df_india$year)))
+y = max(as.numeric(levels(df_india$year)))
+
+df_india$year <- factor(df_india$year, levels = seq(y, x, by=-1))
+
+ggplot(df_india, aes(x = months_order_india, y = profit, fill=year)) +
+  geom_bar(stat="identity", position="dodge") +
+  theme_light() +
+  theme(plot.title = element_text(hjust = 0.5),
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "Multiple Bar Charts - Total Profit made by India by Month by Year",
+       x = "Months of the year",
+       y = "Profit",
+       fill = "Year") +
+  scale_fill_brewer(palette = "Accent") +
+  # Currently there is a lot fo information in this graph
+  # no we get a graph for each year in its own
+  facet_wrap(~year, ncol=3, nrow=2)
+
+```
+
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Conclusion </span> 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The analysis of the IMDB Movies dataset from 1950 to 2024 provides valuable insights into global movie production trends, financial performance, and audience reception. The data confirms that the United States dominates the film industry in both production volume and revenue, largely due to Hollywood’s extensive global reach, high-budget blockbusters, and widespread distribution networks. India follows closely behind in production volume and secures the second-highest revenue, though its per-movie earnings are significantly lower due to regional market constraints and different pricing models. Other top-producing countries, including Japan, the UK, France, Germany, and Canada, contribute significantly to cinema but generate less revenue, indicating a more localized industry impact. The findings underscore the critical role of market size, international appeal, and distribution networks in determining a movie’s financial success. While production volume does not always translate to revenue, countries with strong domestic and international markets—such as the U.S. and India—continue to thrive. Additionally, the presence of data anomalies, such as negative runtimes and missing values, highlights the importance of thorough data preprocessing in conducting meaningful analyses. Overall, this study emphasizes how global cinema operates within distinct economic and cultural frameworks, shaping audience preferences and industry profitability. Understanding these trends can help filmmakers, studios, and analysts anticipate shifts in the industry and make data-driven decisions to optimize movie success. </span> 
+

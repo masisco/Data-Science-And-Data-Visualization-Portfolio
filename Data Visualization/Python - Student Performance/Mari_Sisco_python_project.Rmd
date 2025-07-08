@@ -1,0 +1,338 @@
+---
+title: "<span style='color:black; font-weight: bold; font-family: \"Helvetica Now Text Medium\"'> Student Performance Data Analysis </span>"
+author: "<span style='font-family: \"Helvetica Now Text Medium\";'>By: Maria Sisco | 2025-04-09 </span>"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 2
+    theme: united
+    code_folding: hide
+---
+
+``` {r setup, include=FALSE, warning=FALSE, include=FALSE}
+library(reticulate)
+use_python("/opt/anaconda3/bin/python", required = TRUE)
+
+```
+
+``` {python, echo = TRUE, message =FALSE, warning= FALSE}
+import os
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = '/opt/anaconda3/Library/plugins/platforms'
+```
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Introduction </span> {.tabset .tabset-fade .tabset-pills}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> In any educational setting, student performance is a key indicator of academic success and overall learning outcomes. It reflects not only the effectiveness of teaching methods and curricula but also highlights areas where students may require additional support. Understanding the factors that contribute to academic performance is crucial for educational institutions aiming to improve student achievement, retention, and engagement. By analyzing data on student performance, educators and administrators can identify patterns, correlations, and areas for improvement, ultimately fostering a more effective learning environment. This dataset, containing real data from 5,000 records collected from a private learning provider in the United States, provides valuable insights into various aspects of student performance, offering opportunities to optimize educational strategies and outcomes.  </span>
+
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Dataset </span> 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The original dataset was obtained from Kaggle.com and contains 5,000 rows of data. The dataset includes various attributes that provide a comprehensive view of each student's academic performance and personal background. Key identifiers such as Student_ID, First_Name, and Last_Name are included alongside contact details like Email. Demographic information such as Gender, Age, and Department offer context for analyzing performance across different student groups. The dataset also captures key academic indicators, including Attendance (%), Midterm Score, Final Score, Assignments Average, Quizzes Average, Participation Score, Projects Score, and Total Score, which together contribute to the overall Grade. Additionally, personal factors like Study Hours per Week, Extracurricular Activities, and Internet Access at Home provide insight into the external influences on student performance. Socioeconomic and family factors are also included with Parent Education Level and Family Income Level, while the Stress_Level (1-10) and Sleep_Hours_per_Night give a sense of how well-being might correlate with academic outcomes. This dataset offers a rich foundation for exploring the diverse factors that shape student achievement. It is important to note that the dataset has minimal errors, and only a few columns have missing values/NAs.  </span>
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Findings </span> {.tabset .tabset-fade .tabset-pills}
+
+## Stress-Level Amongst Different Age Groups {.tabset .tabset-fade .tabset-pills}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The bubble chart presents the distribution of stress levels among students aged 18 to 24, highlighting notable trends in how stress varies across this age range. Stress levels from 4 to 8 are the most frequently reported, with larger, brighter bubbles indicating higher frequency at these levels. Specifically, age 21 and age 24 show a significant concentration of students reporting stress level 8, which could be linked to the pressures of academic transitions, such as job hunting or nearing graduation. Age 22 stands out with a wide spread of stress levels, including both low (3, 4, 5) and high (10), suggesting that students at this age may experience fluctuating stress levels due to varying life circumstances. In contrast, lower stress levels (1–3) are less common, with age 18 being the exception, where a large bubble at stress level 2 suggests a more relaxed period, likely due to the optimism of starting college. Overall, the chart reveals a clear upward trend in high stress levels, particularly at ages 21 and 24, reflecting critical academic and career milestones. The consistency of moderate stress levels (4–6) across multiple ages further emphasizes that while stress is prevalent, its intensity can vary widely depending on individual experiences and age-specific challenges.  </span>
+
+```{python, echo = TRUE, message =FALSE, warning= FALSE}
+# ---- all imports --------
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings 
+import seaborn as sns
+from matplotlib.ticker import FuncFormatter
+
+warnings.filterwarnings("ignore")
+
+path = "/Users/mariandresisco/Documents/DataViz/"
+
+filename = path + 'Students_Grading_Dataset.csv'
+
+# This dataset is real data of 5,000 records collected from a private learning provider in the United States
+# The dataset includes key attributes necessary for exploring patterns, correlations, and insights related to academic performance.
+
+df = pd.read_csv(filename)
+
+# It is composed of 23 columns and 5,000 records
+
+#----- DATA PREP ---------
+
+# df.isna().sum()
+# both "Age" and "Stress_Level (1-10)" have no missing values we must worry about
+
+# np.unique(df['Age'])
+# The ages are from 18 to 24
+
+# np.unique(df['Stress_Level (1-10)'])
+# The dataset is clean, and the stress levels are from 1 to 10, there are no random, incorrect values
+
+
+# ------ GRAPH 1 -------- Stress Level
+
+x = df.groupby(['Stress_Level (1-10)', 'Age'])['Stress_Level (1-10)'].count().reset_index(name='count')
+x = pd.DataFrame(x)
+
+# Scale factor so the shapes of the scatter plot are noticeable
+scaled_sizes = (x['count'] - x['count'].min())**1.2  # Adjust exponent: increases the difference between smaller and larger values
+scaled_sizes = scaled_sizes / scaled_sizes.max() * 600  # Normalizes the values and scales them to a more noticeable range
+
+plt.figure(figsize=(18,10))
+plt.scatter(x['Age'], x['Stress_Level (1-10)'], marker='8', cmap='viridis', 
+            c=x['count'], s=scaled_sizes, edgecolors='black')
+plt.title('Stress Level (from 1 to 10) of Students from Ages 18 to 24', fontsize = 18)
+plt.xlabel('Age', fontsize = 14)
+plt.ylabel('Stress Level', fontsize =14)
+
+cbar = plt.colorbar()
+cbar.set_label('Frequency', rotation = 270, fontsize = 14, color = 'black', labelpad = 30)
+
+my_x_ticks = [*range(x['Age'].min(), x['Age'].max()+1,1 )]
+plt.xticks(my_x_ticks, fontsize =14, color= 'black');
+
+my_y_ticks = [*range(x['Stress_Level (1-10)'].min(), x['Stress_Level (1-10)'].max()+1,1 )]
+plt.yticks(my_y_ticks, fontsize =14, color= 'black');
+
+plt.show()
+
+```
+
+## Number of Students per Department {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The bar chart provides a detailed overview of student enrollment across various departments, with a clear color-coding system that highlights how each department's student count compares to the average. The vertical dashed line at the mean student count (1250) serves as a reference point, helping to quickly identify which departments are above, within, or below average. The Computer Science (CS) department stands out with the highest enrollment, well above the mean at 2022 students, reflecting strong interest in tech fields, possibly driven by career opportunities and flexible learning options. In contrast, the Mathematics department has the lowest enrollment at 503 students, significantly below the average, which could indicate lower interest, more selective admission criteria, or a perceived lack of career incentives. The Business and Engineering departments both fall within 20% of the mean, suggesting stable and consistent demand, likely due to their broad, interdisciplinary appeal and strong career prospects. Overall, the chart underscores the growing popularity of CS while highlighting the need for strategic planning in resource allocation and potential outreach efforts for underrepresented departments like Mathematics. </span>
+
+```{python, echo = TRUE, message =FALSE, warning= FALSE, fig.width = 15, fig.asp =0.66}
+# ------ GRAPH 2 ------------ Number of Students per Department 
+
+#np.unique(df['Department'])
+
+dept_counts = df['Department'].value_counts().reset_index()
+dept_counts.columns = ['Department', 'Count']
+
+def pick_colors_according_to_mean_count(this_data):
+    colors = []
+    avg = this_data.Count.mean()
+    for each in this_data.Count:
+        if each > avg*1.20:
+            colors.append('mediumvioletred')
+        elif each < avg*0.80:
+            colors.append('lightpink')
+        else:
+            colors.append('hotpink')
+    return colors
+  
+
+import matplotlib.patches as mpatches
+
+my_colors = pick_colors_according_to_mean_count(dept_counts)
+
+Above = mpatches.Patch(color='mediumvioletred', label='Above Average')
+At = mpatches.Patch(color='hotpink', label='Within 20% of the Average')
+Below = mpatches.Patch(color='lightpink', label='Below Average')
+
+fig = plt.figure(figsize=(18,12))
+ax1 = fig.add_subplot(1,1,1)
+ax1.barh(dept_counts.Department, dept_counts.Count, color = my_colors)
+
+
+for row_counter, value_at_row_counter in enumerate(dept_counts.Count):
+    if value_at_row_counter > dept_counts.Count.mean()*1.20:
+        color = 'mediumvioletred'
+    elif value_at_row_counter < dept_counts.Count.mean()*0.80:
+        color = 'lightpink'
+    else:
+        color = 'hotpink'
+    ax1.text(value_at_row_counter+10, row_counter, str(value_at_row_counter), color = color, size=12, fontweight='bold',
+            ha='left', va='center', backgroundcolor='white')
+plt.xlim(0, dept_counts.Count.max()*1.1);
+
+ax1.legend(loc = 'upper right', handles = [Above, At, Below], fontsize=14)
+plt.axvline(dept_counts.Count.mean(), color='black', linestyle='dashed')
+ax1.text(dept_counts.Count.mean()+15, 0, 'Mean = ' + str(dept_counts.Count.mean()), rotation=0, fontsize=14)
+
+ax1.set_title('Number of Students per Department', size=20)
+ax1.set_xlabel('Number of Students', fontsize=16)
+ax1.set_ylabel('Departments', fontsize = 16)
+plt.xticks(fontsize = 14);
+plt.yticks(fontsize = 14);
+
+plt.show()
+
+```
+
+## Final Exam Score vs Study Hours per Age Group {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The line graph illustrates the relationship between study hours per week and final scores across different age groups, ranging from 18 to 24. Each line represents a distinct age group, with varying thickness to highlight trends. Key findings reveal that the optimal study hours for most students fall between 10 and 20 hours per week. Age 20 shows the strongest positive correlation between study hours and performance, peaking at 74 with 20 hours of study, while age 21 follows a bell-shaped curve, reaching its highest score of 73 at 10 hours, and then dropping sharply after 25 hours, suggesting diminishing returns from excessive study. Age 24, on the other hand, shows a notable decline in performance after 10 hours, possibly due to burnout. Younger students, particularly those aged 18 and 19, tend to perform better with fewer study hours, with a slight negative trend in performance as study time increases. Age 22 and 23 display more stable and less sensitive trends, with age 23 showing a gradual improvement with increased study time. Overall, the graph emphasizes that while more study time may initially improve performance, excessive hours, especially beyond 20–25 hours, can be counterproductive due to fatigue or poor time management. This insight is valuable for students, academic advisors, and policymakers to help optimize study strategies and balance academic workloads. </span>
+
+```{python, echo = TRUE, message =FALSE, warning= FALSE}
+
+# ------ GRAPH 3 --------- Final Exam Score vs study hours
+
+# Analyzing the Final Exam Score by the amount of each study hours per age group 
+
+# Make sure Study_Hours_per_Week is rounded
+df['Rounded_Study_Hours'] = df['Study_Hours_per_Week'].round()
+df['Rounded_Hours'] = (df['Study_Hours_per_Week'] / 5).round() * 5
+
+# Set up the plot
+fig = plt.figure(figsize=(18, 10))
+ax = fig.add_subplot(1, 1, 1)
+
+# Optional: define custom colors for ages 18–24
+age_colors = {
+    18: 'darkred',
+    19: 'goldenrod',
+    20: 'deepskyblue',
+    21: 'gold',
+    22: 'dodgerblue',
+    23: 'steelblue',
+    24: 'firebrick'
+}
+
+thick_ages = [20,21,24]
+
+# Group by age and plot each group
+for age, grp in df.groupby('Age'):
+    grp_sorted = grp.groupby('Rounded_Hours')['Final_Score'].mean().reset_index()
+    grp_sorted.plot(ax=ax, kind='line', x='Rounded_Hours', y='Final_Score',
+                    label=f'Age {age}', color=age_colors.get(age, 'black'), marker='o', linewidth= 9 if age in thick_ages else 1)
+
+# Labels and styling
+plt.title('Final Score by Study Hours per Week (Age 18–24)', fontsize=18)
+ax.set_xlabel('Study Hours per Week (Rounded to Neartest Multiple of 5)', fontsize=18)
+ax.set_ylabel('Final Score', fontsize=18, labelpad=20)
+ax.tick_params(axis='x', labelsize=14)
+ax.tick_params(axis='y', labelsize=14)
+ax.legend(title='Age Group', fontsize=14, title_fontsize=14)
+
+plt.grid(True)
+plt.show()
+
+```
+
+## Family Income and Grades Obtained {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The donut chart provides a layered view of the relationship between family income and academic performance. The outer ring highlights the distribution of students across three income levels: Low Income (39.66%), Medium Income (39.46%), and High Income (20.88%). The chart reveals that the majority of students come from Low and Medium-income families, making up about 79% of the total student population. The inner ring then breaks down the grade distribution within each income group. Low-income students have the highest proportion of A grades at 12.0%, followed closely by Medium-income students with 11.8%. Both groups show a fairly balanced grade distribution with a slight advantage towards higher grades. In contrast, High-income students have significantly lower percentages across all grades, with only 6.1% receiving an A, which is much lower than the other two groups. This suggests that, despite the lower proportion of High-income students, their academic performance does not surpass that of their Low and Medium-income peers. The findings imply that factors beyond family income, such as motivation or school environment, may play a larger role in determining academic success. Overall, the chart emphasizes that while Low and Medium-income students dominate both the student population and the top grades, High-income students appear to have a lower academic performance in comparison. </span>
+
+```{python, echo = TRUE, message =FALSE, warning= FALSE}
+
+# ----- GRAPH 4 --------- Family Income and Grades
+
+#print(df['Grade'].unique())
+#print(df['Family_Income_Level'].unique())
+
+# Group and prepare the data
+pie_df = df.groupby(['Family_Income_Level', 'Grade']).size().reset_index(name='Count')
+
+# Repeat outer (income levels) and inner (grades) accordingly
+outer_df = pie_df.groupby('Family_Income_Level')['Count'].sum().reset_index()
+
+# Set up inside and outside reference numbers for colors
+
+number_outside_colors = len(outer_df.Family_Income_Level.unique())
+outside_color_ref_number = np.arange(number_outside_colors)*2
+
+number_inside_colors = len(pie_df.Grade.unique())
+all_color_ref_number = np.arange(number_outside_colors + number_inside_colors)
+
+inside_color_ref_number = []
+for each in all_color_ref_number:
+    if each not in outside_color_ref_number:
+        inside_color_ref_number.append(each)
+
+# Start plotting
+fig = plt.figure(figsize=(10,10))
+ax = fig.add_subplot(1,1,1)
+
+colormap = plt.get_cmap('tab20b')
+
+# Outer ring: Family_Income_Level
+outer_colors = colormap(outside_color_ref_number)
+outer_labels = outer_df['Family_Income_Level']
+outer_sizes = outer_df['Count']
+
+outer_df['Pct'] = outer_df['Count'] / outer_df['Count'].sum()
+
+outer_df['Label'] = outer_df.apply(lambda row: f"{row['Family_Income_Level']}\n{row['Pct']*100:.2f}%", axis=1)
+
+ax.pie(
+    outer_sizes, radius=1, colors=outer_colors, pctdistance=0.85, labeldistance=1.1,
+    wedgeprops=dict(edgecolor='white'), textprops={'fontsize': 14},
+    labels=outer_df['Label'],
+    startangle=90
+);
+
+# Inner ring: Grade within each Family_Income_Level
+inner_colors = colormap(inside_color_ref_number)
+inner_sizes = pie_df['Count']
+inner_labels = pie_df['Grade']
+
+ax.pie(
+    inner_sizes, radius=0.7, colors=inner_colors, pctdistance=0.55, labeldistance=0.8,
+    wedgeprops=dict(edgecolor='white'), textprops={'fontsize': 11},
+    labels=inner_labels,
+    autopct='%1.1f%%',
+    startangle=90
+);
+
+# Donut hole
+hole = plt.Circle((0, 0), 0.3, fc='white')
+fig.gca().add_artist(hole)
+
+ax.axis('equal');
+plt.title('Grade Distribution by Family Income Level', fontsize=18)
+
+plt.tight_layout()
+plt.show()
+```
+
+## Attendance per Department and Family Education {.tabset}
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> The heatmap visualizes attendance patterns based on family education level and department. The Y-axis represents family income levels (indicated by parental education), with categories including High School, Bachelor's, Master's, and PhD. The X-axis represents departments (Business, CS, Engineering, and Mathematics). The color gradient ranges from red (high attendance) to blue (low attendance). Key observations include that attendance rates are clustered around 74–78%. Engineering students with Master's-level families stand out with the highest attendance rate at 77.95%. Business students with Master's-level families show the lowest attendance at 74.21%. By department, Business shows the most variability, with better attendance from High School and PhD families (76.5% and 76.57%, respectively) compared to Bachelor's and Master's (around 74%). CS shows minimal variation, with attendance slightly higher among High School families at 75.8%. Engineering stands out, especially for Master's families, while Mathematics shows moderate attendance, with High School students outperforming others at 75.82%. By family income level, High School families consistently have higher attendance (75–76.5%) across all departments, possibly indicating a greater appreciation for education. Bachelor's families have the lowest attendance (74.4–74.8%). Master's students in Engineering demonstrate the highest attendance, while CS and Business students show lower attendance rates. In summary, students from High School family backgrounds have the highest and most consistent attendance across departments, with Master's-level students in Engineering showing the highest overall attendance. </span>
+
+```{python, echo = TRUE, message =FALSE, warning= FALSE}
+
+# ------ GRAPH 5 ---- Attendance by department and family education
+
+# Group data to calculate average attendance
+hm_df = df.groupby(['Parent_Education_Level', 'Department'])['Attendance (%)'].mean().unstack()
+
+# Plotting
+fig = plt.figure(figsize=(18,10))
+ax = fig.add_subplot(1,1,1)
+
+# Format colorbar to show percentages with 2 decimal points
+percent_fmt = FuncFormatter(lambda x, p: f'{x:.2f}')
+
+# Heatmap
+sns.heatmap(
+    hm_df,
+    linewidth=0.2,
+    annot=True,
+    fmt=".2f",
+    cmap='coolwarm',
+    square=True,
+    annot_kws={'size':11},
+    cbar_kws={'format':percent_fmt, 'orientation':'vertical'},
+    ax=ax
+)
+
+# Titles and labels
+plt.title('Heatmap of Average Attendance by Family Education Level and Department', fontsize=18, pad=15)
+plt.xlabel('Department', fontsize=18, labelpad=10)
+plt.ylabel('Family Income Level', fontsize=18, labelpad=10)
+plt.yticks(rotation=0, size=14);
+plt.xticks(size=14);
+
+# Adjust colorbar
+cbar = ax.collections[0].colorbar
+cbar.set_label('Average Attendance (%)', rotation=270, fontsize=14, color='black', labelpad=20)
+
+plt.show()
+```
+
+# <span style="font-family: 'Helvetica Now Text Medium';"> Conclusion </span> 
+
+<span style="color:#01257D; font-family: 'Helvetica Now Text Medium';"> In conclusion, the data across various visualizations and analyses reveal several key insights about student performance, attendance, and departmental trends. Students from lower-income families or those with lower parental education levels tend to show better attendance, with high engagement observed in departments like Engineering, especially for Master's-level families. However, in terms of academic performance, it is clear that Low and Medium income students, despite comprising the majority of the student population, contribute disproportionately to high grades, particularly in comparison to their High-income peers. Furthermore, study hours per week exhibit a complex relationship with performance, with optimal study hours varying by age group, with younger students (18-20) generally achieving better results with fewer hours. Meanwhile, the Computer Science department stands out for its overwhelming demand, indicating high interest in tech fields. The findings suggest that while resources tied to family income can play a role in student performance, other factors such as study habits, departmental structures, and age-related tendencies contribute significantly to outcomes. Institutions may need to consider these dynamics when planning resources, offering support, or designing academic strategies to balance student needs and optimize performance across diverse groups.  </span> 
