@@ -9,7 +9,7 @@
 
 ## DEMO:
 
-https://drive.google.com/file/d/1uqTI9LJkcBFmbFki4zWymRLUTK3QWZMu/view
+https://www.youtube.com/watch?v=ha9zyGigLds
 ---
 
 ## Project Overview
